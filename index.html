@@ -293,6 +293,17 @@
     card.dataset.delay = i * 120;
     observer.observe(card);
   });
+
+  // auto-resize: envia altura real para o iframe pai
+  function reportHeight() {
+    const h = document.documentElement.scrollHeight;
+    window.parent.postMessage({ iframeHeight: h }, '*');
+  }
+  window.addEventListener('load', reportHeight);
+  setTimeout(reportHeight, 300);
+  setTimeout(reportHeight, 900);
+  setTimeout(reportHeight, 2000);
+  new ResizeObserver(reportHeight).observe(document.body);
 </script>
 </body>
 </html>
