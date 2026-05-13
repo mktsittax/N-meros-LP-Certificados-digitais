@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sittax — Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111110;
+    --surface: #181816;
+    --orange: #F26522;
+    --orange-dim: rgba(242,101,34,0.12);
+    --text: #e8e4dc;
+    --muted: #7a7770;
+    --line: rgba(242,101,34,0.35);
+  }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    padding: 2rem;
+  }
+
+  /* noise overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .stats-wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  /* top rule */
+  .stats-wrapper::before {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--orange) 30%, var(--orange) 70%, transparent);
+    margin-bottom: 0;
+    opacity: 0.4;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-top: none;
+    position: relative;
+  }
+
+  /* dividers */
+  .stat-card:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 20%; bottom: 20%;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.08) 60%, transparent);
+  }
+
+  .stat-card {
+    position: relative;
+    padding: 3.2rem 2.4rem 2.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  /* hover glow */
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, var(--orange-dim), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .stat-card:hover::before { opacity: 1; }
+
+  /* sweep line */
+  .sweep {
+    position: absolute;
+    bottom: 0; left: -100%; 
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+    transition: none;
+  }
+  .stat-card.swept .sweep {
+    animation: sweep-line 0.6s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+
+  @keyframes sweep-line {
+    0%   { left: -100%; opacity: 1; }
+    100% { left: 100%;  opacity: 0; }
+  }
+
+  .stat-value {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 900;
+    font-size: clamp(2.8rem, 4.5vw, 4.2rem);
+    letter-spacing: -0.01em;
+    color: var(--orange);
+    line-height: 1;
+    margin-bottom: 1rem;
+    position: relative;
+    /* initial state */
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .stat-card.visible .stat-value {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* pulse at end of count */
+  @keyframes pulse-val {
+    0%   { text-shadow: 0 0 0px var(--orange); }
+    40%  { text-shadow: 0 0 24px var(--orange), 0 0 48px rgba(242,101,34,0.4); }
+    100% { text-shadow: 0 0 0px var(--orange); }
+  }
+  .stat-value.done {
+    animation: pulse-val 0.7s ease forwards;
+  }
+
+  .stat-label {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+    max-width: 160px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s;
+  }
+  .stat-card.visible .stat-label {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* hover: flicker effect on number */
+  @keyframes flicker-in {
+    0%   { opacity: 0.3; transform: translateY(-3px) scale(1.04); filter: blur(2px); }
+    40%  { opacity: 1;   transform: translateY(1px)  scale(1.02); filter: blur(0); }
+    70%  { transform: translateY(-1px) scale(1.01); }
+    100% { transform: translateY(0)   scale(1); filter: blur(0); }
+  }
+  .stat-card:hover .stat-value {
+    animation: flicker-in 0.35s ease forwards;
+    color: #ff7a38;
+    text-shadow: 0 0 20px rgba(242,101,34,0.5), 0 0 40px rgba(242,101,34,0.25);
+  }
+
+  @media (max-width: 700px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-card:nth-child(2)::after,
+    .stat-card:nth-child(4)::after { display: none; }
+  }
+  @media (max-width: 400px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .stat-card::after { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stats-wrapper">
+  <div class="stats-grid" id="statsGrid">
+
+    <div class="stat-card" data-value="200" data-prefix="+" data-suffix="K" data-label="empresas no ecossistema Sittax" data-duration="1600">
+      <div class="stat-value"><span class="count">0</span></div>
+      <div class="stat-label"></div>
+      <div class="sweep"></div>
+    </div>
+
+    <div class="stat-card" data-value="100" data-prefix="" data-suffix="%" data-label="sem arquivo exposto" data-duration="1200">
+      <div class="stat-value"><span class="count">0</span></div>
+      <div class="stat-label"></div>
+      <div class="sweep"></div>
+    </div>
+
+    <div class="stat-card" data-value="24" data-prefix="" data-suffix="h" data-label="implantação pela equipe ByToken" data-duration="900">
+      <div class="stat-value"><span class="count">0</span></div>
+      <div class="stat-label"></div>
+      <div class="sweep"></div>
+    </div>
+
+    <div class="stat-card" data-value="90" data-prefix="R$" data-suffix="k" data-label="multas evitadas" data-duration="1400">
+      <div class="stat-value"><span class="count">0</span></div>
+      <div class="stat-label"></div>
+      <div class="sweep"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function easeOutExpo(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  }
+
+  function animateCount(el, target, duration, prefix, suffix, onDone) {
+    const start = performance.now();
+    function tick(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutExpo(progress);
+      const current = Math.round(eased * target);
+      el.textContent = prefix + current + suffix;
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        el.textContent = prefix + target + suffix;
+        onDone && onDone();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  const cards = document.querySelectorAll('.stat-card');
+
+  // populate labels
+  cards.forEach(card => {
+    card.querySelector('.stat-label').textContent = card.dataset.label;
+    const valEl = card.querySelector('.stat-value');
+    const prefix = card.dataset.prefix || '';
+    const suffix = card.dataset.suffix || '';
+    valEl.querySelector('.count').textContent = prefix + '0' + suffix;
+  });
+
+  // restructure: value el holds prefix+count+suffix inline
+  cards.forEach(card => {
+    const valEl = card.querySelector('.stat-value');
+    const prefix = card.dataset.prefix || '';
+    const suffix = card.dataset.suffix || '';
+    const span = valEl.querySelector('.count');
+    span.textContent = prefix + '0' + suffix;
+  });
+
+  let animated = new Set();
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const card = entry.target;
+        if (animated.has(card)) return;
+        animated.add(card);
+
+        const delay = parseInt(card.dataset.delay || 0);
+        setTimeout(() => {
+          card.classList.add('visible');
+
+          const target = parseInt(card.dataset.value);
+          const prefix = card.dataset.prefix || '';
+          const suffix = card.dataset.suffix || '';
+          const duration = parseInt(card.dataset.duration || 1200);
+          const span = card.querySelector('.count');
+
+          animateCount(span, target, duration, prefix, suffix, () => {
+            card.querySelector('.stat-value').classList.add('done');
+            card.classList.add('swept');
+          });
+        }, delay);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  // stagger delays
+  cards.forEach((card, i) => {
+    card.dataset.delay = i * 120;
+    observer.observe(card);
+  });
+</script>
+</body>
+</html>
